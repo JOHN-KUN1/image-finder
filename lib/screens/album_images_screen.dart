@@ -24,7 +24,6 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     loadAlbumImages = loadAllAlbumImages();
   }
@@ -58,9 +57,12 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                 final medium = albumImages[index];
                 return GestureDetector(
                   onTap: () async {
-                    log('tapped');
-                    final file = await medium.getFile();
-                    getIt<NavigationService>().navigate(ImageViewer(medium: medium, allImages: albumImages, file: file,));
+                    getIt<NavigationService>().navigate(
+                      ImageViewer(
+                        allImages: albumImages,
+                        index: index,
+                      ),
+                    );
                   },
                   child: FadeInImage(
                     fit: BoxFit.cover,
@@ -83,11 +85,26 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   }
 }
 
-class ImageViewer extends StatelessWidget {
-  final File file;
+class ImageViewer extends StatefulWidget {
+  final int index;
   final List<Medium> allImages;
-  final Medium medium;
-  const ImageViewer({super.key, required this.medium, required this.allImages, required this.file});
+  const ImageViewer({
+    super.key,
+    required this.allImages,
+    required this.index
+  });
+
+  @override
+  State<ImageViewer> createState() => _ImageViewerState();
+}
+
+class _ImageViewerState extends State<ImageViewer> {
+  late File imageFile;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,15 +113,14 @@ class ImageViewer extends StatelessWidget {
         child: PhotoViewGallery.builder(
           scrollPhysics: const BouncingScrollPhysics(),
           builder: (BuildContext context, int index) {
+            final newMedium = widget.allImages[index];
             return PhotoViewGalleryPageOptions(
-              imageProvider: FileImage(file),
-              initialScale: PhotoViewComputedScale.contained * 0.8,
-              heroAttributes: PhotoViewHeroAttributes(
-                tag: medium.id,
-              ),
+              imageProvider: PhotoProvider(mediumId: newMedium.id),//FileImage(file),
+              initialScale: PhotoViewComputedScale.contained,
+              heroAttributes: PhotoViewHeroAttributes(tag: newMedium.id),
             );
           },
-          itemCount: allImages.length,
+          itemCount: widget.allImages.length,
           loadingBuilder: (context, event) => Center(
             child: Container(
               width: 20.0,
@@ -116,8 +132,16 @@ class ImageViewer extends StatelessWidget {
               ),
             ),
           ),
-          // backgroundDecoration: widget.backgroundDecoration,
-          // pageController: widget.pageController,
+          pageController: PageController(initialPage: widget.index),
+          // onPageChanged: (index) async {
+          //   final orgFile = await widget.allImages[index].getFile();
+          //   setState(() {
+          //     imageFile = orgFile;
+          //   });
+          // },
+          backgroundDecoration: const BoxDecoration(
+            color: Colors.black
+          ),
           // onPageChanged: onPageChanged,
         ),
       ),
