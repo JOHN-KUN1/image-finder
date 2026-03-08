@@ -1,9 +1,13 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:image_finder/screens/album_image_screen.dart';
+import 'package:image_finder/screens/album_images_screen.dart';
+import 'package:image_finder/services/get_it_service.dart';
+import 'package:image_finder/services/navigator_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_gallery/photo_gallery.dart';
-import 'package:transparent_image/transparent_image.dart';
+import 'package:photo_view/photo_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     loadImages = loadAllImages();
   }
+
+  
 
   Future<void> loadAllImages() async {
     if (await Permission.storage.request().isGranted) {
@@ -81,39 +87,42 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               itemBuilder: (context, index) {
                 final album = imageAlbums[index];
-                return Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    border: BoxBorder.all(width: 2, color: Colors.greenAccent),
-                    borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(
-                      image: AlbumThumbnailProvider(
-                        album: album,
-                        highQuality: true,
+                return GestureDetector(
+                  onTap: () => getIt<NavigationService>().navigate(AlbumImagesScreen(album: album)),
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      border: BoxBorder.all(width: 2, color: Colors.greenAccent),
+                      borderRadius: BorderRadius.circular(20),
+                      image: DecorationImage(
+                        image: AlbumThumbnailProvider( 
+                          album: album,
+                          highQuality: true,
+                        ),
+                        fit: BoxFit.cover,
                       ),
-                      fit: BoxFit.cover,
                     ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Spacer(),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.75),
-                            borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))
-                          ),
-                          padding: EdgeInsets.all(5),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Text(album.name ?? 'Unknown', style: TextStyle(color: Colors.white, fontSize: 14,),textAlign: TextAlign.center,),
-                                Text('${album.count}',style: TextStyle(color: Colors.white, fontSize: 14))
-                              ],
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Spacer(),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.75),
+                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))
                             ),
-                          ),
-                        )
-                      ],
+                            padding: EdgeInsets.all(5),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Text(album.name ?? 'Unknown', style: TextStyle(color: Colors.white, fontSize: 14,),textAlign: TextAlign.center,),
+                                  Text('${album.count}',style: TextStyle(color: Colors.white, fontSize: 14))
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -125,3 +134,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_finder/screens/home_screen.dart';
+import 'package:image_finder/services/get_it_service.dart';
+import 'package:image_finder/services/navigator_service.dart';
 
 void main() {
+  setUpLocator();
   runApp(const MyApp());
 }
 
@@ -12,6 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: getIt<NavigationService>().navigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
