@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
+
 class ApiService {
   final Dio dio;
   const ApiService({required this.dio});
@@ -13,23 +14,18 @@ class ApiService {
             {
               "parts": [
                 {
-                  "inline_data": {
-                  "mime_type":"image/jpeg",
-                  "data": imgPath
-                  }
+                  "inline_data": {"mime_type": "image/jpeg", "data": imgPath},
                 },
                 {
-                  "text": "does this image have something similar to this description: $description",
+                  "text":
+                      "Does this image have something similar to this description: $description\nRespond strictly with only 'yes' or 'no'.",
                 },
               ],
             },
           ],
           "systemInstruction": {
             "parts": [
-              {
-                "text":
-                    "You are to respond with either a yes or no",
-              },
+              {"text": "You are to respond with either a yes or no"},
             ],
           },
         },
@@ -38,10 +34,9 @@ class ApiService {
       final aiResponse = data['candidates'][0]['content']['parts'][0]['text'];
       return aiResponse;
     } catch (e) {
-      log(e.toString());
-      throw Exception(e.toString());
+      log('ApiService error: $e');
+      // Gracefully fail on error (caller handles 'no' safely)
+      return 'no';
     }
   }
-
-
 }
