@@ -24,7 +24,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   late Future<void> loadAlbumImages;
   List<Medium> albumImages = [];
   List<Medium> foundImages = [];
-  
+
   bool isSearching = false;
   double searchProgress = 0.0;
   int processedCount = 0;
@@ -55,7 +55,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
 
   Future<void> findCorrespondingImages(String description) async {
     if (description.trim().isEmpty) return;
-    
+
     setState(() {
       hasSearched = true;
       isSearching = true;
@@ -66,42 +66,37 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
 
     FocusScope.of(context).unfocus();
 
-    final options = BaseOptions(
-      method: 'POST',
-      headers: {"x-goog-api-key": dotenv.env['API_KEY'] as String},
-      contentType: 'application/json',
-    );
-    final dio = Dio(options);
-    final api = ApiService(dio: dio);
-
     const int batchSize = 5;
     for (int i = 0; i < albumImages.length; i += batchSize) {
       final batch = albumImages.skip(i).take(batchSize).toList();
-      
-      await Future.wait(batch.map((image) async {
-        try {
-          final imageFile = await image.getFile();
-          final imgPath = base64Encode(imageFile.readAsBytesSync());
-          final response = await api.getInsights(description, imgPath);
-          
-          if (response.trim().toLowerCase() == 'yes') {
+
+      await Future.wait(
+        batch.map((image) async {
+          try {
+            final imageFile = await image.getFile();
+            final mimeType = image.mimeType!;
+            final imgPath = base64Encode(imageFile.readAsBytesSync());
+            final response = await getIt<ApiService>().getInsights(description, imgPath, mimeType);
+
+            if (response.trim().toLowerCase() == 'yes') {
+              if (mounted) {
+                setState(() {
+                  foundImages.add(image);
+                });
+              }
+            }
+          } catch (e) {
+            log('Error processing image: $e');
+          } finally {
             if (mounted) {
               setState(() {
-                foundImages.add(image);
+                processedCount++;
+                searchProgress = processedCount / albumImages.length;
               });
             }
           }
-        } catch (e) {
-          log('Error processing image: $e');
-        } finally {
-          if (mounted) {
-            setState(() {
-              processedCount++;
-              searchProgress = processedCount / albumImages.length;
-            });
-          }
-        }
-      }));
+        }),
+      );
     }
 
     if (mounted) {
@@ -135,10 +130,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
         return GestureDetector(
           onTap: () async {
             getIt<NavigationService>().navigate(
-              ImageViewer(
-                allImages: images,
-                index: index,
-              ),
+              ImageViewer(allImages: images, index: index),
             );
           },
           child: Hero(
@@ -196,12 +188,20 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
       body: FutureBuilder(
         future: loadAlbumImages,
         builder: (context, asyncSnapshot) {
-          if (asyncSnapshot.connectionState == ConnectionState.waiting && albumImages.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFFFF5A00)));
+          if (asyncSnapshot.connectionState == ConnectionState.waiting &&
+              albumImages.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
+            );
           } else if (asyncSnapshot.hasError) {
-            return Center(child: Text(asyncSnapshot.error.toString(), style: const TextStyle(color: Colors.red)));
+            return Center(
+              child: Text(
+                asyncSnapshot.error.toString(),
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
           }
-          
+
           return Column(
             children: [
               Padding(
@@ -220,21 +220,24 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       hintStyle: const TextStyle(color: Colors.grey),
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
                       suffixIcon: hasSearched
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.grey),
-                            onPressed: () {
-                              _searchController.clear();
-                              FocusScope.of(context).unfocus();
-                              setState(() {
-                                hasSearched = false;
-                                isSearching = false;
-                                foundImages.clear();
-                              });
-                            },
-                          )
-                        : null,
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              onPressed: () {
+                                _searchController.clear();
+                                FocusScope.of(context).unfocus();
+                                setState(() {
+                                  hasSearched = false;
+                                  isSearching = false;
+                                  foundImages.clear();
+                                });
+                              },
+                            )
+                          : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     textInputAction: TextInputAction.search,
                     onSubmitted: (value) => findCorrespondingImages(value),
@@ -250,15 +253,29 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Analyzing images...', style: TextStyle(color: Color(0xFFFF5A00), fontWeight: FontWeight.bold)),
-                          Text('$processedCount / ${albumImages.length}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          const Text(
+                            'Analyzing images...',
+                            style: TextStyle(
+                              color: Color(0xFFFF5A00),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '$processedCount / ${albumImages.length}',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
                         value: searchProgress,
                         backgroundColor: const Color(0xFF1A1C23),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5A00)),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFFF5A00),
+                        ),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       const SizedBox(height: 16),
@@ -266,35 +283,63 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                   ),
                 ),
               ],
-              
+
               if (!isSearching && !hasSearched)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
                   child: Row(
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('All Images', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Text(
+                            'All Images',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Container(height: 3, width: 40, color: const Color(0xFFFF5A00)),
+                          Container(
+                            height: 3,
+                            width: 40,
+                            color: const Color(0xFFFF5A00),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                
+
               if (hasSearched && !isSearching)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
                   child: Row(
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Found ${foundImages.length} results', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            'Found ${foundImages.length} results',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Container(height: 3, width: 40, color: const Color(0xFFFF5A00)),
+                          Container(
+                            height: 3,
+                            width: 40,
+                            color: const Color(0xFFFF5A00),
+                          ),
                         ],
                       ),
                     ],
@@ -346,7 +391,11 @@ class _ImageViewerState extends State<ImageViewer> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 4)]),
+          icon: const Icon(
+            Icons.close,
+            color: Colors.white,
+            shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -355,9 +404,7 @@ class _ImageViewerState extends State<ImageViewer> {
         builder: (BuildContext context, int index) {
           final newMedium = widget.allImages[index];
           return PhotoViewGalleryPageOptions(
-            imageProvider: PhotoProvider(
-              mediumId: newMedium.id,
-            ),
+            imageProvider: PhotoProvider(mediumId: newMedium.id),
             initialScale: PhotoViewComputedScale.contained,
             minScale: PhotoViewComputedScale.contained,
             maxScale: PhotoViewComputedScale.covered * 2,
@@ -373,7 +420,8 @@ class _ImageViewerState extends State<ImageViewer> {
               color: const Color(0xFFFF5A00),
               value: event == null
                   ? 0
-                  : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
+                  : event.cumulativeBytesLoaded /
+                        (event.expectedTotalBytes ?? 1),
             ),
           ),
         ),

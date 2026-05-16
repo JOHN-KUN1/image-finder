@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadAllImages() async {
-    if (await Permission.storage.request().isGranted) {
+    if (await Permission.photos.request().isGranted) {
       final albums = await PhotoGallery.listAlbums(
         mediumType: MediumType.image,
         newest: true,
@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Albums', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.white.withOpacity(0.05), height: 1.0),
+          child: Container(color: Colors.white.withValues(alpha:0.05), height: 1.0),
         ),
       ),
       body: FutureBuilder(
