@@ -3,7 +3,6 @@ import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_finder/services/api_service.dart';
 import 'package:image_finder/services/get_it_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
@@ -25,6 +24,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   List<Medium> albumImages = [];
   List<Medium> foundImages = [];
 
+  String errorMessage = '';
   bool isSearching = false;
   double searchProgress = 0.0;
   int processedCount = 0;
@@ -76,7 +76,11 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
             final imageFile = await image.getFile();
             final mimeType = image.mimeType!;
             final imgPath = base64Encode(imageFile.readAsBytesSync());
-            final response = await getIt<ApiService>().getInsights(description, imgPath, mimeType);
+            final response = await getIt<ApiService>().getInsights(
+              description,
+              imgPath,
+              mimeType,
+            );
 
             if (response.trim().toLowerCase() == 'yes') {
               if (mounted) {
@@ -86,9 +90,12 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
               }
             }
           } catch (e) {
-            log('Error processing image: $e');
-          } finally {
             if (mounted) {
+                errorMessage = e.toString();
+            }
+            return;
+          } finally {
+            if (mounted && errorMessage.isEmpty) {
               setState(() {
                 processedCount++;
                 searchProgress = processedCount / albumImages.length;
@@ -107,13 +114,46 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   }
 
   Widget _buildGrid(List<Medium> images) {
-    if (images.isEmpty && hasSearched && !isSearching) {
+    if (images.isEmpty && hasSearched && !isSearching && errorMessage.isEmpty) {
       return const Center(
         child: Text(
           'No matching images found.',
           style: TextStyle(color: Colors.grey, fontSize: 16),
         ),
       );
+    } else if (errorMessage.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(
+                'Error',
+                style: const TextStyle(fontSize: 18, color: Color(0xFFFF5A00)),
+              ),
+              content: Text(
+                'Something went wrong. Please check your internet connection and try again.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              actions: [
+                SizedBox.shrink(),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    //errorMessage = '';
+                  },
+                  child: Text(
+                    'OK',
+                    style: const TextStyle(color: Color(0xFFFF5A00)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+        errorMessage = '';
+      });
     }
 
     return GridView.builder(
@@ -194,11 +234,23 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
               child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
             );
           } else if (asyncSnapshot.hasError) {
-            return Center(
-              child: Text(
-                asyncSnapshot.error.toString(),
-                style: const TextStyle(color: Colors.red),
-              ),
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text(
+                    'Error',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFFFF5A00),
+                    ),
+                  ),
+                  content: Text(
+                    asyncSnapshot.error.toString(),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                );
+              },
             );
           }
 

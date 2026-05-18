@@ -109,22 +109,6 @@ class ApiService {
               "content":
                   "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'.",
             },
-            // {
-            //   "role": "user",
-            //   "content": [
-            //     {
-            //       "type": "text",
-            //       "text":
-            //           "Does this image have something similar to this description: $description. Respond with only 'yes' or 'no'.",
-            //     },
-            //     {
-            //       "type": "image_url",
-            //       "image_url": {
-            //         "url": "data:$mimeType;base64,$imgPath",
-            //       },
-            //     },
-            //   ],
-            // },
           ],
         },
       );
@@ -133,7 +117,7 @@ class ApiService {
       return aiResponse;
     } catch (e) {
       // Gracefully fail on error (caller handles 'no' safely)
-      return 'no';
+      rethrow;
     }
   }
 }
