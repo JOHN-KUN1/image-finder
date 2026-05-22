@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_finder/services/api_service.dart';
 import 'package:image_finder/services/get_it_service.dart';
@@ -91,7 +90,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
             }
           } catch (e) {
             if (mounted) {
-                errorMessage = e.toString();
+              errorMessage = e.toString();
             }
             return;
           } finally {
@@ -114,14 +113,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   }
 
   Widget _buildGrid(List<Medium> images) {
-    if (images.isEmpty && hasSearched && !isSearching && errorMessage.isEmpty) {
-      return const Center(
-        child: Text(
-          'No matching images found.',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
-      );
-    } else if (errorMessage.isNotEmpty) {
+    if (errorMessage.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
           context: context,
@@ -154,6 +146,14 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
         );
         errorMessage = '';
       });
+    }
+    if (images.isEmpty && hasSearched && !isSearching) {
+      return const Center(
+        child: Text(
+          'No matching images found.',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
     }
 
     return GridView.builder(
@@ -201,211 +201,253 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.album.name ?? 'Gallery',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            Text(
-              '${albumImages.length} images & videos',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.white.withOpacity(0.05), height: 1.0),
-        ),
-      ),
-      body: FutureBuilder(
-        future: loadAlbumImages,
-        builder: (context, asyncSnapshot) {
-          if (asyncSnapshot.connectionState == ConnectionState.waiting &&
-              albumImages.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
-            );
-          } else if (asyncSnapshot.hasError) {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text(
-                    'Error',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFFFF5A00),
-                    ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (isSearching){
+          final shouldExit = await showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text('Exit Album'),
+                content: Text('Are you sure you want to leave? Exiting will stop the search'),
+                actions: [
+                  TextButton(
+                    child: Text('Cancel'),
+                    onPressed: () => Navigator.pop(context, false),
                   ),
-                  content: Text(
-                    asyncSnapshot.error.toString(),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  TextButton(
+                    child: Text('Confirm'),
+                    onPressed: () => Navigator.pop(context, true),
                   ),
-                );
-              },
-            );
+                ],
+              );
+            },
+          );
+          if (!mounted) return;
+          if (shouldExit){
+            Navigator.of(context).pop();
           }
-
-          return Column(
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1C23),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Describe to find image...',
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      suffixIcon: hasSearched
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.grey),
-                              onPressed: () {
-                                _searchController.clear();
-                                FocusScope.of(context).unfocus();
-                                setState(() {
-                                  hasSearched = false;
-                                  isSearching = false;
-                                  foundImages.clear();
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (value) => findCorrespondingImages(value),
-                  ),
+              Text(
+                widget.album.name ?? 'Gallery',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
-
-              if (isSearching) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Analyzing images...',
-                            style: TextStyle(
-                              color: Color(0xFFFF5A00),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '$processedCount / ${albumImages.length}',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: searchProgress,
-                        backgroundColor: const Color(0xFF1A1C23),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFFFF5A00),
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ],
-
-              if (!isSearching && !hasSearched)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 4.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'All Images',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: 3,
-                            width: 40,
-                            color: const Color(0xFFFF5A00),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-              if (hasSearched && !isSearching)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 4.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Found ${foundImages.length} results',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: 3,
-                            width: 40,
-                            color: const Color(0xFFFF5A00),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-              const SizedBox(height: 8),
-
-              Expanded(
-                child: _buildGrid(hasSearched ? foundImages : albumImages),
+              Text(
+                '${albumImages.length} images & videos',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
-          );
-        },
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1.0),
+            child: Container(
+              color: Colors.white.withOpacity(0.05),
+              height: 1.0,
+            ),
+          ),
+        ),
+        body: FutureBuilder(
+          future: loadAlbumImages,
+          builder: (context, asyncSnapshot) {
+            if (asyncSnapshot.connectionState == ConnectionState.waiting &&
+                albumImages.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
+              );
+            } else if (asyncSnapshot.hasError) {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text(
+                      'Error',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFFFF5A00),
+                      ),
+                    ),
+                    content: Text(
+                      asyncSnapshot.error.toString(),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  );
+                },
+              );
+            }
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1C23),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Describe to find image...',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.grey,
+                        ),
+                        suffixIcon: hasSearched
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.clear,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  FocusScope.of(context).unfocus();
+                                  setState(() {
+                                    hasSearched = false;
+                                    isSearching = false;
+                                    foundImages.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (value) => findCorrespondingImages(value),
+                    ),
+                  ),
+                ),
+
+                if (isSearching) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Analyzing images...',
+                              style: TextStyle(
+                                color: Color(0xFFFF5A00),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '$processedCount / ${albumImages.length}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: searchProgress,
+                          backgroundColor: const Color(0xFF1A1C23),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFFF5A00),
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                ],
+
+                if (!isSearching && !hasSearched)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 4.0,
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'All Images',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              height: 3,
+                              width: 40,
+                              color: const Color(0xFFFF5A00),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (hasSearched && !isSearching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 4.0,
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Found ${foundImages.length} results',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              height: 3,
+                              width: 40,
+                              color: const Color(0xFFFF5A00),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
+
+                Expanded(
+                  child: _buildGrid(hasSearched ? foundImages : albumImages),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

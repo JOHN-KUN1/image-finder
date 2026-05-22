@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadAllImages() async {
-    if (await Permission.storage.request().isGranted) {
+    if (await Permission.photos.request().isGranted) {
       final albums = await PhotoGallery.listAlbums(
         mediumType: MediumType.image,
         newest: true,
