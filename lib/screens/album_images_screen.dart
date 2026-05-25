@@ -255,7 +255,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1.0),
             child: Container(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               height: 1.0,
             ),
           ),
@@ -297,7 +297,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1A1C23),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                     ),
                     child: TextField(
                       controller: _searchController,
