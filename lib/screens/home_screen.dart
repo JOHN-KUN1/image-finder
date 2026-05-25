@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:image_finder/screens/album_images_screen.dart';
 import 'package:image_finder/services/get_it_service.dart';
@@ -25,7 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadAllImages() async {
-    if (await Permission.storage.request().isGranted) {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidDeviceInfo = await deviceInfo.androidInfo;
+    if (androidDeviceInfo.version.sdkInt < 33 ? await Permission.storage.request().isGranted : await Permission.photos.request().isGranted) {
       final albums = await PhotoGallery.listAlbums(
         mediumType: MediumType.image,
         newest: true,
