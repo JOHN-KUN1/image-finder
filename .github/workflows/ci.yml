@@ -31,5 +31,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/app/outputs/apk/release/*"
-          tag: Image_Finder_Beta_v0.0.1(Hotfix)
+          tag: Image_Finder_Beta_v0.0.1(Hotfix2)
           token: ${{ secrets.TOKEN }}
