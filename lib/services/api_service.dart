@@ -112,6 +112,7 @@ class ApiService {
           ],
         },
       );
+      log('her');
       final data = response.data;
       final aiResponse = data['choices'][0]['message']['content'] as String;
       return aiResponse;
