@@ -1,14 +1,7 @@
-import 'dart:convert';
-import 'dart:developer';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_finder/blocs/found_images/found_images_cubit.dart';
-import 'package:image_finder/blocs/has_searched/has_searched_cubit.dart';
-import 'package:image_finder/blocs/response/response_cubit.dart';
-import 'package:image_finder/blocs/searching/searching_cubit.dart';
-import 'package:image_finder/services/api_service.dart';
+import 'package:image_finder/blocs/image_search/image_search_cubit.dart';
 import 'package:image_finder/services/get_it_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
 import 'package:photo_gallery/photo_gallery.dart';
@@ -27,13 +20,6 @@ class AlbumImagesScreen extends StatefulWidget {
 class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   late Future<void> loadAlbumImages;
   List<Medium> albumImages = [];
-  List<Medium> foundImages = [];
-
-  String errorMessage = '';
-  bool isSearching = false;
-  double searchProgress = 0.0;
-  int processedCount = 0;
-  bool hasSearched = false;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -58,116 +44,147 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
     }
   }
 
-  // Future<void> findCorrespondingImages(String description) async {
-  //   if (description.trim().isEmpty) return;
-
-  //   setState(() {
-  //     hasSearched = true;
-  //     isSearching = true;
-  //     foundImages.clear();
-  //     processedCount = 0;
-  //     searchProgress = 0.0;
-  //   });
-
-  //   FocusScope.of(context).unfocus();
-
-  //   const int batchSize = 5;
-  //   for (int i = 0; i < albumImages.length; i += batchSize) {
-  //     final batch = albumImages.skip(i).take(batchSize).toList();
-
-  //     await Future.wait(
-  //       batch.map((image) async {
-  //         try {
-  //           if (!mounted) return;
-  //           final imageFile = await image.getFile();
-  //           final mimeType = image.mimeType!;
-  //           final imgPath = base64Encode(imageFile.readAsBytesSync());
-  //           await context.read<ResponseCubit>().getInsights(
-  //             description,
-  //             imgPath,
-  //             mimeType,
-  //           );
-
-  //           if (context.read<ResponseCubit>().state.response ==
-  //               'yes') {
-  //             if (mounted) {
-  //               setState(() {
-  //                 foundImages.add(image);
-  //               });
-  //             }
-  //           }
-  //         } catch (e) {
-  //           if (mounted) {
-  //             errorMessage = e.toString();
-  //           }
-  //           return;
-  //         } finally {
-  //           if (mounted && errorMessage.isEmpty) {
-  //             setState(() {
-  //               processedCount++;
-  //               searchProgress = processedCount / albumImages.length;
-  //             });
-  //           }
-  //         }
-  //       }),
-  //     );
-  //   }
-
-  //   if (mounted) {
-  //     setState(() {
-  //       isSearching = false;
-  //     });
-  //   }
-  // }
-
-  Widget _buildGrid(List<Medium> images) {
-    if (images.isEmpty && hasSearched && !isSearching) {
-      return const Center(
-        child: Text(
-          'No matching images found.',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 8),
-      itemCount: images.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        crossAxisCount: 2,
-        childAspectRatio: 0.85,
-      ),
-      itemBuilder: (context, index) {
-        final medium = images[index];
-        return GestureDetector(
-          onTap: () async {
-            getIt<NavigationService>().navigate(
-              ImageViewer(allImages: images, index: index),
-            );
-          },
-          child: Hero(
-            tag: medium.id,
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFF1E1E24),
-              ),
-              child: FadeInImage(
-                fit: BoxFit.cover,
-                placeholder: MemoryImage(kTransparentImage),
-                image: ThumbnailProvider(
-                  mediumId: medium.id,
-                  mediumType: MediumType.image,
-                  width: 256,
-                  height: 256,
-                  highQuality: true,
+  Widget _buildGrid() {
+    return BlocConsumer<ImageSearchCubit, ImageSearchState>(
+      listener: (context, state) {
+        if (state.status == ImageSearchStatus.failure) {
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text(
+                  'Error',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFFFF5A00),
+                  ),
+                ),
+                content: Text(
+                  'Something went wrong. Please check your internet connection and try again.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                actions: [
+                  SizedBox.shrink(),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      //errorMessage = '';
+                    },
+                    child: Text(
+                      'OK',
+                      style: const TextStyle(color: Color(0xFFFF5A00)),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state.status == ImageSearchStatus.initial) {
+          return GridView.builder(
+            padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              top: 8,
+            ),
+            itemCount: albumImages.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              crossAxisCount: 2,
+              childAspectRatio: 0.85,
+            ),
+            itemBuilder: (context, index) {
+              final medium = albumImages[index];
+              return GestureDetector(
+                onTap: () async {
+                  getIt<NavigationService>().navigate(
+                    ImageViewer(allImages: albumImages, index: index),
+                  );
+                },
+                child: Hero(
+                  tag: medium.id,
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: const Color(0xFF1E1E24),
+                    ),
+                    child: FadeInImage(
+                      fit: BoxFit.cover,
+                      placeholder: MemoryImage(kTransparentImage),
+                      image: ThumbnailProvider(
+                        mediumId: medium.id,
+                        mediumType: MediumType.image,
+                        width: 256,
+                        height: 256,
+                        highQuality: true,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        }
+        if (state.status == ImageSearchStatus.failure &&
+            state.foundImages.isEmpty) {
+          return const Center(
+            child: Text(
+              'No matching images found.',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
+        }
+        return GridView.builder(
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            top: 8,
+          ),
+          itemCount: state.foundImages.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            crossAxisCount: 2,
+            childAspectRatio: 0.85,
+          ),
+          itemBuilder: (context, index) {
+            final medium = state.foundImages[index];
+            return GestureDetector(
+              onTap: () async {
+                getIt<NavigationService>().navigate(
+                  ImageViewer(allImages: state.foundImages, index: index),
+                );
+              },
+              child: Hero(
+                tag: medium.id,
+                child: Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFF1E1E24),
+                  ),
+                  child: FadeInImage(
+                    fit: BoxFit.cover,
+                    placeholder: MemoryImage(kTransparentImage),
+                    image: ThumbnailProvider(
+                      mediumId: medium.id,
+                      mediumType: MediumType.image,
+                      width: 256,
+                      height: 256,
+                      highQuality: true,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -175,10 +192,11 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final imageState = context.watch<ImageSearchCubit>().state;
     return PopScope(
-      canPop: false,
+      canPop: imageState.status != ImageSearchStatus.loading,
       onPopInvokedWithResult: (didPop, result) async {
-        if (isSearching) {
+        if (context.read<ImageSearchCubit>().state.status == ImageSearchStatus.loading) {
           final shouldExit = await showDialog(
             context: context,
             builder: (context) {
@@ -278,6 +296,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       ),
                     ),
                     child: TextField(
+                      enabled: imageState.status != ImageSearchStatus.loading,
                       controller: _searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -287,7 +306,8 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                           Icons.search,
                           color: Colors.grey,
                         ),
-                        suffixIcon: context.watch<HasSearchedCubit>().state.hasSearched
+                        suffixIcon:
+                            imageState.status == ImageSearchStatus.success || imageState.status == ImageSearchStatus.loading
                             ? IconButton(
                                 icon: const Icon(
                                   Icons.clear,
@@ -296,11 +316,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                                 onPressed: () {
                                   _searchController.clear();
                                   FocusScope.of(context).unfocus();
-                                  setState(() {
-                                    context.read<HasSearchedCubit>().setHasSearched(false);
-                                    context.read<SearchingCubit>().setSearch(false);
-                                    foundImages.clear();
-                                  });
+                                  context.read<ImageSearchCubit>().resetSearch();
                                 },
                               )
                             : null,
@@ -313,22 +329,18 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       textInputAction: TextInputAction.search,
                       onSubmitted: (value) async {
                         if (value.trim().isNotEmpty) {
-                          context.read<HasSearchedCubit>().setHasSearched(true);
-                          context.read<SearchingCubit>().setSearch(true);
-                          await context.read<FoundImagesCubit>().getInsights(
+                          FocusScope.of(context).unfocus();
+                          await context.read<ImageSearchCubit>().search(
                             albumImages,
                             value,
                           );
-                          if (mounted) {
-                            context.read<SearchingCubit>().setSearch(false);
-                          }
                         }
                       },
                     ),
                   ),
                 ),
 
-                if (context.watch<SearchingCubit>().state.isSearching) ...[
+                if (imageState.status == ImageSearchStatus.loading) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
@@ -344,7 +356,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                               ),
                             ),
                             Text(
-                              '$processedCount / ${albumImages.length}',
+                              '${imageState.processedCount} / ${albumImages.length}',
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 12,
@@ -354,7 +366,10 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                         ),
                         const SizedBox(height: 8),
                         LinearProgressIndicator(
-                          value: searchProgress,
+                          value:
+                              imageState
+                                  .processedCount /
+                              albumImages.length,
                           backgroundColor: const Color(0xFF1A1C23),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFFFF5A00),
@@ -367,7 +382,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                   ),
                 ],
 
-                if (!context.watch<SearchingCubit>().state.isSearching && !context.watch<HasSearchedCubit>().state.hasSearched)
+                if (imageState.status == ImageSearchStatus.initial)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,
@@ -398,7 +413,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                     ),
                   ),
 
-                if (context.watch<HasSearchedCubit>().state.hasSearched && !context.watch<SearchingCubit>().state.isSearching)
+                if (imageState.status == ImageSearchStatus.success)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,
@@ -410,7 +425,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Found ${context.read<FoundImagesCubit>().state.images.length} results',
+                              'Found ${imageState.foundImages.length} results',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -432,7 +447,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                 const SizedBox(height: 8),
 
                 Expanded(
-                  child: _buildGrid(context.watch<HasSearchedCubit>().state.hasSearched ? context.watch<FoundImagesCubit>().state.images : albumImages),
+                  child: _buildGrid(),
                 ),
               ],
             );

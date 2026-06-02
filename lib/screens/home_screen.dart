@@ -2,6 +2,9 @@ import 'dart:developer';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_finder/blocs/image_search/image_search_cubit.dart';
+import 'package:image_finder/repositories/ai_repository.dart';
 import 'package:image_finder/screens/album_images_screen.dart';
 import 'package:image_finder/services/get_it_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
@@ -30,7 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> loadAllImages() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     AndroidDeviceInfo androidDeviceInfo = await deviceInfo.androidInfo;
-    if (androidDeviceInfo.version.sdkInt < 33 ? await Permission.storage.request().isGranted : await Permission.photos.request().isGranted) {
+    if (androidDeviceInfo.version.sdkInt < 33
+        ? await Permission.storage.request().isGranted
+        : await Permission.photos.request().isGranted) {
       final albums = await PhotoGallery.listAlbums(
         mediumType: MediumType.image,
         newest: true,
@@ -55,48 +60,87 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Albums', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white)),
+        title: const Text(
+          'Albums',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.white,
+          ),
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.white.withValues(alpha:0.05), height: 1.0),
+          child: Container(
+            color: Colors.white.withValues(alpha: 0.05),
+            height: 1.0,
+          ),
         ),
       ),
       body: FutureBuilder(
         future: loadImages,
         builder: (context, asyncSnapshot) {
           if (asyncSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFFFF5A00)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
+            );
           } else if (asyncSnapshot.hasError) {
-            return Center(child: Text(asyncSnapshot.error.toString(), style: const TextStyle(color: Colors.red)));
+            return Center(
+              child: Text(
+                asyncSnapshot.error.toString(),
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
           } else {
             if (!permissionGranted) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
+                    const Icon(
+                      Icons.image_not_supported,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(height: 16),
-                    const Text('Cannot access images', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Text(
+                      'Cannot access images',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    const Text('Please grant storage permissions to continue.', style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      'Please grant storage permissions to continue.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     const SizedBox(height: 24),
                     OutlinedButton(
                       onPressed: openAppSettings,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFFF5A00),
                         side: const BorderSide(color: Color(0xFFFF5A00)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: const Text('Grant Access', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Grant Access',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
               );
             }
-            
+
             if (imageAlbums.isEmpty) {
               return const Center(
-                child: Text('No albums found.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                child: Text(
+                  'No albums found.',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
               );
             }
 
@@ -112,7 +156,12 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, index) {
                 final album = imageAlbums[index];
                 return GestureDetector(
-                  onTap: () => getIt<NavigationService>().navigate(AlbumImagesScreen(album: album)),
+                  onTap: () => getIt<NavigationService>().navigate(
+                    BlocProvider<ImageSearchCubit>(
+                      create: (context) => ImageSearchCubit(aiRepository: context.read<AiRepository>()),
+                      child: AlbumImagesScreen(album: album),
+                    ),
+                  ),
                   child: Container(
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
@@ -131,33 +180,47 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         Positioned(
-                          bottom: 0, left: 0, right: 0,
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
                           height: 70,
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
-                                colors: [Colors.black.withOpacity(0.9), Colors.transparent],
+                                colors: [
+                                  Colors.black.withOpacity(0.9),
+                                  Colors.transparent,
+                                ],
                               ),
                             ),
                           ),
                         ),
                         Positioned(
-                          bottom: 12, left: 12, right: 12,
+                          bottom: 12,
+                          left: 12,
+                          right: 12,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 album.name ?? 'Unknown',
-                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 '${album.count} items',
-                                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                              )
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),
