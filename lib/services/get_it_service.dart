@@ -2,12 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_finder/services/api_service.dart';
+import 'package:image_finder/services/cache_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
 
 final getIt = GetIt.instance;
 
 void setUpLocator() {
   getIt.registerLazySingleton<NavigationService>(() => NavigationService());
+  getIt.registerLazySingleton<CacheService>(() => CacheService());
   getIt.registerLazySingleton<ApiService>(
     () => ApiService(
       dio: Dio(
