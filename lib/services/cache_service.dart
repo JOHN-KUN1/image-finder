@@ -17,7 +17,6 @@ class CacheService {
     final normalizedQuery = query.trim().toLowerCase();
     return '$_prefix${imageId}_$normalizedQuery';
   }
-
   /// Returns the cached result for [imageId] + [query], or `null` on a miss.
   Future<String?> get(String imageId, String query) async {
     await _ensureInit();
