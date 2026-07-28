@@ -1,4 +1,5 @@
 import 'dart:developer';
+
 import 'package:dio/dio.dart';
 
 class ApiService {
@@ -96,18 +97,19 @@ class ApiService {
   Future<String> getInsights(
     String description,
     String imgPath,
+    String? refImg,
     String mimeType,
   ) async {
     try {
       final response = await dio.post(
         "https://integrate.api.nvidia.com/v1/chat/completions",
         data: {
-          "model": "google/gemma-3n-e4b-it",
+          "model": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
           "messages": [
             {
               "role": "user",
               "content":
-                  "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'.",
+                  refImg == null ? "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'." : "Using this reference image: <img src=\"data:image/png;base64,'$refImg'\" />, does this album image: <img src=\"data:image/png;base64,'$imgPath'\" /> look similar? Respond with only 'yes' or 'no'.",
             },
           ],
         },
@@ -118,6 +120,7 @@ class ApiService {
       return aiResponse;
     } catch (e) {
       // Gracefully fail on error (caller handles 'no' safely)
+      log('error: $e');
       rethrow;
     }
   }
