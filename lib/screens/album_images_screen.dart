@@ -1,9 +1,12 @@
+import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_finder/blocs/image_search/image_search_cubit.dart';
 import 'package:image_finder/services/get_it_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:photo_gallery/photo_gallery.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -18,6 +21,8 @@ class AlbumImagesScreen extends StatefulWidget {
 }
 
 class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
+  final imagePicker = ImagePicker();
+  XFile? referenceImage;
   late Future<void> loadAlbumImages;
   List<Medium> albumImages = [];
 
@@ -196,7 +201,8 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
     return PopScope(
       canPop: imageState.status != ImageSearchStatus.loading,
       onPopInvokedWithResult: (didPop, result) async {
-        if (context.read<ImageSearchCubit>().state.status == ImageSearchStatus.loading) {
+        if (context.read<ImageSearchCubit>().state.status ==
+            ImageSearchStatus.loading) {
           final shouldExit = await showDialog(
             context: context,
             builder: (context) {
@@ -296,18 +302,31 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       ),
                     ),
                     child: TextField(
-                      enabled: imageState.status != ImageSearchStatus.loading,
+                      readOnly: referenceImage != null,
+                      enabled:
+                          imageState.status != ImageSearchStatus.loading,
                       controller: _searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Describe to find image...',
+                        hintText: referenceImage == null ? 'Describe to find image...' : 'Using reference image only',
                         hintStyle: const TextStyle(color: Colors.grey),
-                        prefixIcon: const Icon(
-                          Icons.search,
+                        prefixIcon: IconButton(
+                          onPressed: () async {
+                            if (_searchController.text.trim().isNotEmpty || referenceImage != null) {
+                              FocusScope.of(context).unfocus();
+                              await context.read<ImageSearchCubit>().search(
+                                albumImages,
+                                _searchController.text,
+                                referenceImage?.path,
+                              );
+                            }
+                          },
+                          icon: Icon(Icons.search),
                           color: Colors.grey,
                         ),
                         suffixIcon:
-                            imageState.status == ImageSearchStatus.success || imageState.status == ImageSearchStatus.loading
+                            imageState.status == ImageSearchStatus.success ||
+                                imageState.status == ImageSearchStatus.loading
                             ? IconButton(
                                 icon: const Icon(
                                   Icons.clear,
@@ -316,10 +335,62 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                                 onPressed: () {
                                   _searchController.clear();
                                   FocusScope.of(context).unfocus();
-                                  context.read<ImageSearchCubit>().resetSearch();
+                                  context
+                                      .read<ImageSearchCubit>()
+                                      .resetSearch();
                                 },
                               )
-                            : null,
+                            : referenceImage != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      clipBehavior: Clip.hardEdge,
+                                      height: 24.0,
+                                      width: 24.0,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(5),
+                                        image: DecorationImage(
+                                          fit: BoxFit.cover,
+                                          image: FileImage(
+                                            File(referenceImage!.path),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.grey,
+                                        size: 16,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          referenceImage = null;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : IconButton(
+                                onPressed: () async {
+                                  final pickedImage = await imagePicker
+                                      .pickImage(source: ImageSource.gallery);
+                                  setState(() {
+                                    referenceImage = pickedImage;
+                                  });
+                                },
+                                icon: Icon(
+                                  Icons.image_search,
+                                  color: Colors.grey,
+                                ),
+                              ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -328,11 +399,12 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       ),
                       textInputAction: TextInputAction.search,
                       onSubmitted: (value) async {
-                        if (value.trim().isNotEmpty) {
+                        if (value.trim().isNotEmpty || referenceImage != null) {
                           FocusScope.of(context).unfocus();
                           await context.read<ImageSearchCubit>().search(
                             albumImages,
                             value,
+                            referenceImage?.path,
                           );
                         }
                       },
@@ -366,10 +438,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                         ),
                         const SizedBox(height: 8),
                         LinearProgressIndicator(
-                          value:
-                              imageState
-                                  .processedCount /
-                              albumImages.length,
+                          value: imageState.processedCount / albumImages.length,
                           backgroundColor: const Color(0xFF1A1C23),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFFFF5A00),

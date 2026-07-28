@@ -7,9 +7,9 @@ class AiRepository {
     required this.apiService,
   });
 
-  Future<String> getInsights(String description, String imgPath, String mimeType) async {
+  Future<String> getInsights(String description, String imgPath,String?refImg, String mimeType) async {
     try {
-      final aiResponse = await apiService.getInsights(description, imgPath, mimeType);
+      final aiResponse = await apiService.getInsights(description, imgPath, refImg, mimeType);
       return aiResponse;
     } catch (e) {
       rethrow;

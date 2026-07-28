@@ -97,6 +97,7 @@ class ApiService {
   Future<String> getInsights(
     String description,
     String imgPath,
+    String? refImg,
     String mimeType,
   ) async {
     try {
@@ -108,13 +109,12 @@ class ApiService {
             {
               "role": "user",
               "content":
-                  "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'.",
+                  refImg == null ? "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'." : "Using this reference image: <img src=\"data:image/png;base64,'$refImg'\" />, does this album image: <img src=\"data:image/png;base64,'$imgPath'\" /> look similar? Respond with only 'yes' or 'no'.",
             },
           ],
         },
       );
       final data = response.data;
-      log('$data');
       final aiResponse = data['choices'][0]['message']['content'] as String;
       return aiResponse;
     } catch (e) {
