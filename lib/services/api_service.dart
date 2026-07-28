@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dio/dio.dart';
 
 class ApiService {
@@ -101,7 +103,7 @@ class ApiService {
       final response = await dio.post(
         "https://integrate.api.nvidia.com/v1/chat/completions",
         data: {
-          "model": "google/gemma-3n-e4b-it",
+          "model": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
           "messages": [
             {
               "role": "user",
@@ -112,10 +114,12 @@ class ApiService {
         },
       );
       final data = response.data;
+      log('$data');
       final aiResponse = data['choices'][0]['message']['content'] as String;
       return aiResponse;
     } catch (e) {
       // Gracefully fail on error (caller handles 'no' safely)
+      log('error: $e');
       rethrow;
     }
   }
