@@ -118,7 +118,6 @@ class ApiService {
       final aiResponse = data['choices'][0]['message']['content'] as String;
       return aiResponse;
     } catch (e) {
-      // Gracefully fail on error (caller handles 'no' safely)
       log('error: $e');
       rethrow;
     }
