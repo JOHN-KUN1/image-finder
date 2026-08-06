@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -52,7 +51,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   Widget _buildGrid() {
     return BlocConsumer<ImageSearchCubit, ImageSearchState>(
       listener: (context, state) {
-        if (state.status == ImageSearchStatus.failure) {
+        if (state.status == ImageSearchStatus.failure && state.errorMessage.isNotEmpty) {
           showDialog(
             context: context,
             builder: (context) {
@@ -226,6 +225,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
           );
           if (!mounted) return;
           if (shouldExit) {
+            //context.read<ImageSearchCubit>().resetSearch();
             Navigator.of(context).pop();
           }
         }
@@ -336,7 +336,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                                   _searchController.clear();
                                   FocusScope.of(context).unfocus();
                                   context
-                                      .read<ImageSearchCubit>()
+                                      .read<ImageSearchCubit>()   
                                       .resetSearch();
                                 },
                               )

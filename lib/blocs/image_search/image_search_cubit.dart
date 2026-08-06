@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -45,10 +46,16 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
       final batch = albumImages.skip(i).take(batchSize).toList();
 
       await Future.wait(
+        eagerError: true,
         batch.map((image) async {
           try {
             // 1. Check the local cache first, skip the API if we have a result.
-            final cached = await cacheService.get(image.id, desc);
+            String? cached;
+            if (desc.isEmpty && refImg != null){
+              cached = await cacheService.get(image.id, refImg.substring(refImg.length-10,(refImg.length-10) + 6));
+            }else{
+              cached = await cacheService.get(image.id, desc);
+            }
             final String response;
             String? refImagePath;
 
@@ -88,9 +95,16 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
                 mimeType,
               );
 
+
               // 3. Persist the result so future searches for the same query
               //    skip the network call entirely.
-              await cacheService.set(image.id, desc, response);
+              if (desc.isEmpty && refImg != null){
+                //log('response for set: $response');
+                await cacheService.set(image.id, refImg.substring(refImg.length-10,(refImg.length-10) + 6), response);
+              }else{
+                await cacheService.set(image.id, desc, response);
+              }
+
             }
 
             if (response.toLowerCase().contains('yes')) {
@@ -103,6 +117,7 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
                 errorMessage: e.toString(),
               ),
             );
+            
           } finally {
             emit(state.copyWith(processedCount: state.processedCount + 1));
           }
