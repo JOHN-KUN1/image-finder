@@ -234,7 +234,33 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () async {
+              final cubit = context.read<ImageSearchCubit>();
+              if (cubit.state.status == ImageSearchStatus.loading) {
+                final shouldExit = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Exit Album'),
+                    content: const Text(
+                      'Are you sure you want to leave? Exiting will stop the search',
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancel'),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      TextButton(
+                        child: const Text('Confirm'),
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ],
+                  ),
+                );
+                if (!context.mounted) return;
+                if (shouldExit != true) return;
+              }
+              Navigator.of(context).pop();
+            },
           ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,24 +295,29 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                 child: CircularProgressIndicator(color: Color(0xFFFF5A00)),
               );
             } else if (asyncSnapshot.hasError) {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: Text(
-                      'Error',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFFFF5A00),
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text(
+                        'Error',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFFFF5A00),
+                        ),
                       ),
-                    ),
-                    content: Text(
-                      asyncSnapshot.error.toString(),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  );
-                },
-              );
+                      content: Text(
+                        asyncSnapshot.error.toString(),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    );
+                  },
+                );
+              });
+              return const SizedBox.shrink();
             }
 
             return Column(
