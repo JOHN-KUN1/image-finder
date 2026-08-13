@@ -35,8 +35,6 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
       ),
     );
 
-    // Compress the reference image once here, before the batch loop,
-    // so we don't repeat this expensive operation for every album image.
     String? refImagePath;
     if (refImg != null) {
       final Uint8List? refImageResult =

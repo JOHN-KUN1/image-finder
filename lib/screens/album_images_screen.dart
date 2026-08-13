@@ -52,38 +52,40 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
     return BlocConsumer<ImageSearchCubit, ImageSearchState>(
       listener: (context, state) {
         if (state.status == ImageSearchStatus.failure && state.errorMessage.isNotEmpty) {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: Text(
-                  'Error',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFFFF5A00),
-                  ),
-                ),
-                content: Text(
-                  'Something went wrong. Please check your internet connection and try again.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                actions: [
-                  SizedBox.shrink(),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      //errorMessage = '';
-                    },
-                    child: Text(
-                      'OK',
-                      style: const TextStyle(color: Color(0xFFFF5A00)),
+          if (ModalRoute.of(context)?.isCurrent != false){
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text(
+                    'Error',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFFFF5A00),
                     ),
                   ),
-                ],
-              );
-            },
-          );
+                  content: Text(
+                    'Something went wrong. Please check your internet connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  actions: [
+                    SizedBox.shrink(),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'OK',
+                        style: const TextStyle(color: Color(0xFFFF5A00)),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+
+          }
         }
       },
       builder: (context, state) {
