@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
@@ -37,6 +35,20 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
       ),
     );
 
+    String? refImagePath;
+    if (refImg != null) {
+      final Uint8List? refImageResult =
+          await FlutterImageCompress.compressWithFile(
+            refImg,
+            minWidth: 512,
+            minHeight: 512,
+            quality: 70,
+          );
+      refImagePath = base64Encode(
+        (refImageResult ?? Uint8List(0)).toList(),
+      );
+    }
+
     // Process images in larger concurrent batches for speed.
     const int batchSize = 15;
 
@@ -46,7 +58,6 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
       final batch = albumImages.skip(i).take(batchSize).toList();
 
       await Future.wait(
-        eagerError: true,
         batch.map((image) async {
           try {
             // 1. Check the local cache first, skip the API if we have a result.
@@ -57,7 +68,6 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
               cached = await cacheService.get(image.id, desc);
             }
             final String response;
-            String? refImagePath;
 
             if (cached != null) {
               response = cached;
@@ -73,20 +83,7 @@ class ImageSearchCubit extends Cubit<ImageSearchState> {
               // Thumbnails are always JPEG regardless of the source format.
               const mimeType = 'image/jpeg';
 
-              // Compress reference image once if provided, then
-              // pass it (or null) through a single getInsights call.
-              if (refImg != null) {
-                final Uint8List? refImageResult =
-                    await FlutterImageCompress.compressWithFile(
-                      refImg,
-                      minWidth: 512,
-                      minHeight: 512,
-                      quality: 70,
-                    );
-                refImagePath = base64Encode(
-                  (refImageResult ?? Uint8List(0)).toList(),
-                );
-              }
+              // refImagePath was compressed once before the loop.
 
               response = await aiRepository.getInsights(
                 desc.trim(),
