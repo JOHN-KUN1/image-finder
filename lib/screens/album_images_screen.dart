@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -433,6 +434,7 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       textInputAction: TextInputAction.search,
                       onSubmitted: (value) async {
                         if (value.trim().isNotEmpty || referenceImage != null) {
+                          log('tap pressed');
                           FocusScope.of(context).unfocus();
                           await context.read<ImageSearchCubit>().search(
                             albumImages,

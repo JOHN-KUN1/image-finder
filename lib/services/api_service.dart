@@ -6,112 +6,63 @@ class ApiService {
   final Dio dio;
   const ApiService({required this.dio});
 
-  // Future<String> getInsights(
-  //   String description,
-  //   String imgPath,
-  //   String mimeType,
-  // ) async {
-  //   try {
-  //     final response = await dio.post(
-  //       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-  //       data: {
-  //         "contents": [
-  //           {
-  //             "parts": [
-  //               {
-  //                 "inline_data": {"mime_type": mimeType, "data": imgPath},
-  //               },
-  //               {
-  //                 "text":
-  //                     "Does this image have something similar to this description: $description",
-  //               },
-  //             ],
-  //           },
-  //         ],
-  //         "systemInstruction": {
-  //           "parts": [
-  //             {"text": "You are to respond with either a yes or no"},
-  //           ],
-  //         },
-  //       },
-  //     );
-  //     final data = response.data;
-  //     final aiResponse = data['candidates'][0]['content']['parts'][0]['text'];
-  //     //log('airesponse: $aiResponse');
-  //     return aiResponse;
-  //   } catch (e) {
-  //     log('ApiService error: $e');
-  //     // Gracefully fail on error (caller handles 'no' safely)
-  //     return 'no';
-  //   }
-  // }
-
-  // Future<String> getInsights(
-  //   String description,
-  //   String imgPath,
-  //   String mimeType,
-  // ) async {
-  //   try {
-  //     final response = await dio.post(
-  //       "https://openrouter.ai/api/v1/chat/completions",
-  //       data: {
-  //         "model": "google/gemma-3-4b-it:free",
-  //         "messages": [
-  //           // {
-  //           //   "role": "system",
-  //           //   "content":
-  //           //       "You are an image analysis assistant. Respond with only 'yes' or 'no'.",
-  //           // },
-  //           {
-  //             "role": "user",
-  //             "content": [
-  //               {
-  //                 "type": "text",
-  //                 "text":
-  //                     "Does this image have something similar to this description: $description. Respond with only 'yes' or 'no'.",
-  //               },
-  //               {
-  //                 "type": "image_url",
-  //                 "image_url": {
-  //                   "url": "data:$mimeType;base64,$imgPath",
-  //                 },
-  //               },
-  //             ],
-  //           },
-  //         ],
-  //         "reasoning": {"enabled": true},
-  //       },
-  //     );
-  //     final data = response.data;
-  //     final aiResponse =
-  //         data['choices'][0]['message']['content'] as String;
-  //     log('airesponse: $aiResponse');
-  //     return aiResponse;
-  //   } catch (e) {
-  //     log('ApiService error: $e');
-  //     // Gracefully fail on error (caller handles 'no' safely)
-  //     return 'no';
-  //   }
-  // }
-
   Future<String> getInsights(
     String description,
     String imgPath,
     String? refImg,
     String mimeType,
   ) async {
+    log('------in api');
     try {
+      // Build the content array with image(s) + text in OpenAI multimodal format.
+      final List<Map<String, dynamic>> contentParts = [];
+
+      if (refImg == null) {
+        contentParts.add({
+          "type": "image_url",
+          "image_url": {
+            "url": "data:$mimeType;base64,$imgPath",
+          },
+        });
+        contentParts.add({
+          "type": "text",
+          "text":
+              "Does this image have something similar to this description: $description. Respond with only 'yes' or 'no'.",
+        });
+      } else {
+        contentParts.add({
+          "type": "image_url",
+          "image_url": {
+            "url": "data:$mimeType;base64,$refImg",
+          },
+        });
+        contentParts.add({
+          "type": "image_url",
+          "image_url": {
+            "url": "data:$mimeType;base64,$imgPath",
+          },
+        });
+        contentParts.add({
+          "type": "text",
+          "text":
+              "Using the first reference image, does the second album image look similar? Respond with only 'yes' or 'no'.",
+        });
+      }
+
       final response = await dio.post(
         "https://integrate.api.nvidia.com/v1/chat/completions",
         data: {
-          "model": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+          "model": "nvidia/ising-calibration-1.5-31b",
           "messages": [
             {
               "role": "user",
-              "content":
-                  refImg == null ? "Does this image: <img src=\"data:image/png;base64,'$imgPath'\" /> have something similar to this description: $description. Respond with only 'yes' or 'no'." : "Using this reference image: <img src=\"data:image/png;base64,'$refImg'\" />, does this album image: <img src=\"data:image/png;base64,'$imgPath'\" /> look similar? Respond with only 'yes' or 'no'.",
+              "content": contentParts,
             },
           ],
+          "max_tokens": 32768,
+          "temperature": 1.00,
+          "top_p": 0.95,
+          "stream": false,
         },
       );
       final data = response.data;
@@ -123,3 +74,4 @@ class ApiService {
     }
   }
 }
+
