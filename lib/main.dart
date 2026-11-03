@@ -16,8 +16,8 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  setUpLocator();
   await dotenv.load(fileName: '.env');
+  setUpLocator();
   runApp(const MyApp());
 }
 

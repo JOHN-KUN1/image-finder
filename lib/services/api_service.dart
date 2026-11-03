@@ -12,7 +12,26 @@ class ApiService {
     String? refImg,
     String mimeType,
   ) async {
-    log('------in api');
+    final prompt = refImg == null
+        ? 'Does this image have something similar to this description: $description? Respond with only "yes" or "no".'
+        : 'Using the first image as a reference, does the second image look similar? Respond with only "yes" or "no".';
+
+    final content = <Map<String, dynamic>>[
+      {'type': 'text', 'text': prompt},
+    ];
+
+    if (refImg != null) {
+      content.add({
+        'type': 'image_url',
+        'image_url': {'url': 'data:$mimeType;base64,$refImg'},
+      });
+    }
+
+    content.add({
+      'type': 'image_url',
+      'image_url': {'url': 'data:$mimeType;base64,$imgPath'},
+    });
+
     try {
       // Build the content array with image(s) + text in OpenAI multimodal format.
       final List<Map<String, dynamic>> contentParts = [];
@@ -50,26 +69,22 @@ class ApiService {
       }
 
       final response = await dio.post(
-        "https://integrate.api.nvidia.com/v1/chat/completions",
+        'https://integrate.api.nvidia.com/v1/chat/completions',
         data: {
-          "model": "nvidia/ising-calibration-1.5-31b",
-          "messages": [
-            {
-              "role": "user",
-              "content": contentParts,
-            },
+          'model': 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+          'messages': [
+            {'role': 'user', 'content': content},
           ],
-          "max_tokens": 32768,
-          "temperature": 1.00,
-          "top_p": 0.95,
-          "stream": false,
+          'max_tokens': 65536,
+          'reasoning_budget': 16384,
+          'stream': false,
+          'temperature': 0.6,
+          'top_p': 0.95,
         },
       );
-      final data = response.data;
-      final aiResponse = data['choices'][0]['message']['content'] as String;
-      return aiResponse;
+      return response.data['choices'][0]['message']['content'] as String;
     } catch (e) {
-      log('error: $e');
+      log('NVIDIA API request failed: $e');
       rethrow;
     }
   }
