@@ -2,6 +2,7 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_finder/blocs/album_searched/album_searched_cubit.dart';
 import 'package:image_finder/blocs/image_search/image_search_cubit.dart';
 import 'package:image_finder/repositories/ai_repository.dart';
 import 'package:image_finder/services/cache_service.dart';
@@ -131,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                ),
+                ), 
               );
             }
 
@@ -157,13 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 final album = imageAlbums[index];
                 return GestureDetector(
                   onTap: () => getIt<NavigationService>().navigate(
-                    BlocProvider<ImageSearchCubit>(
-                      create: (context) => ImageSearchCubit(
-                        aiRepository: context.read<AiRepository>(),
-                        cacheService: getIt<CacheService>(),
-                      ),
-                      child: AlbumImagesScreen(album: album),
-                    ),
+                    AlbumImagesScreen(album: album),
                   ),
                   child: Container(
                     clipBehavior: Clip.antiAlias,
@@ -208,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                album.name ?? 'Unknown',
+                                ((context.watch<AlbumSearchedCubit>().state.searchStarted && album.name! == context.watch<AlbumSearchedCubit>().state.albumName) ? '${album.name}'' se!' : album.name) ?? 'Unknown',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,

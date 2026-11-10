@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_finder/blocs/album_searched/album_searched_cubit.dart';
 import 'package:image_finder/blocs/image_search/image_search_cubit.dart';
 import 'package:image_finder/services/get_it_service.dart';
 import 'package:image_finder/services/navigator_service.dart';
@@ -52,8 +53,9 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   Widget _buildGrid() {
     return BlocConsumer<ImageSearchCubit, ImageSearchState>(
       listener: (context, state) {
-        if (state.status == ImageSearchStatus.failure && state.errorMessage.isNotEmpty) {
-          if (ModalRoute.of(context)?.isCurrent != false){
+        if (state.status == ImageSearchStatus.failure &&
+            state.errorMessage.isNotEmpty) {
+          if (ModalRoute.of(context)?.isCurrent != false) {
             showDialog(
               context: context,
               builder: (context) {
@@ -85,12 +87,21 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                 );
               },
             );
-
           }
         }
       },
       builder: (context, state) {
-        if (state.status == ImageSearchStatus.initial) {
+        log('---search started: ${context.watch<AlbumSearchedCubit>().state.searchStarted}');
+        log('----from screen album name: ${widget.album.name}');
+        log('----from cubit album name: ${context.watch<AlbumSearchedCubit>().state.albumName}');
+
+        log('-----check: ${(context.watch<AlbumSearchedCubit>().state.albumName !=
+                    widget.album.name &&
+                context.watch<AlbumSearchedCubit>().state.searchStarted)}');
+        if (state.status == ImageSearchStatus.initial ||
+            (context.watch<AlbumSearchedCubit>().state.albumName !=
+                    widget.album.name &&
+                context.watch<AlbumSearchedCubit>().state.searchStarted)) {
           return GridView.builder(
             padding: const EdgeInsets.only(
               left: 16,
@@ -201,70 +212,70 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
   Widget build(BuildContext context) {
     final imageState = context.watch<ImageSearchCubit>().state;
     return PopScope(
-      canPop: imageState.status != ImageSearchStatus.loading,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (context.read<ImageSearchCubit>().state.status ==
-            ImageSearchStatus.loading) {
-          final shouldExit = await showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: Text('Exit Album'),
-                content: Text(
-                  'Are you sure you want to leave? Exiting will stop the search',
-                ),
-                actions: [
-                  TextButton(
-                    child: Text('Cancel'),
-                    onPressed: () => Navigator.pop(context, false),
-                  ),
-                  TextButton(
-                    child: Text('Confirm'),
-                    onPressed: () => Navigator.pop(context, true),
-                  ),
-                ],
-              );
-            },
-          );
-          if (!mounted) return;
-          if (shouldExit) {
-            //context.read<ImageSearchCubit>().resetSearch();
-            Navigator.of(context).pop();
-          }
-        }
-      },
+      canPop: true, //imageState.status != ImageSearchStatus.loading,
+      // onPopInvokedWithResult: (didPop, result) async {
+      //   if (context.read<ImageSearchCubit>().state.status ==
+      //       ImageSearchStatus.loading) {
+      //     final shouldExit = await showDialog(
+      //       context: context,
+      //       builder: (context) {
+      //         return AlertDialog(
+      //           title: Text('Exit Album'),
+      //           content: Text(
+      //             'Are you sure you want to leave? Exiting will stop the search',
+      //           ),
+      //           actions: [
+      //             TextButton(
+      //               child: Text('Cancel'),
+      //               onPressed: () => Navigator.pop(context, false),
+      //             ),
+      //             TextButton(
+      //               child: Text('Confirm'),
+      //               onPressed: () => Navigator.pop(context, true),
+      //             ),
+      //           ],
+      //         );
+      //       },
+      //     );
+      //     if (!mounted) return;
+      //     if (shouldExit) {
+      //       //context.read<ImageSearchCubit>().resetSearch();
+      //       Navigator.of(context).pop();
+      //     }
+      //   }
+      // },
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              final cubit = context.read<ImageSearchCubit>();
-              if (cubit.state.status == ImageSearchStatus.loading) {
-                final shouldExit = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Exit Album'),
-                    content: const Text(
-                      'Are you sure you want to leave? Exiting will stop the search',
-                    ),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancel'),
-                        onPressed: () => Navigator.pop(context, false),
-                      ),
-                      TextButton(
-                        child: const Text('Confirm'),
-                        onPressed: () => Navigator.pop(context, true),
-                      ),
-                    ],
-                  ),
-                );
-                if (!context.mounted) return;
-                if (shouldExit != true) return;
-              }
-              Navigator.of(context).pop();
-            },
-          ),
+          // leading: IconButton(
+          //   icon: const Icon(Icons.arrow_back),
+          //   onPressed: () async {
+          //     final cubit = context.read<ImageSearchCubit>();
+          //     if (cubit.state.status == ImageSearchStatus.loading) {
+          //       final shouldExit = await showDialog<bool>(
+          //         context: context,
+          //         builder: (context) => AlertDialog(
+          //           title: const Text('Exit Album'),
+          //           content: const Text(
+          //             'Are you sure you want to leave? Exiting will stop the search',
+          //           ),
+          //           actions: [
+          //             TextButton(
+          //               child: const Text('Cancel'),
+          //               onPressed: () => Navigator.pop(context, false),
+          //             ),
+          //             TextButton(
+          //               child: const Text('Confirm'),
+          //               onPressed: () => Navigator.pop(context, true),
+          //             ),
+          //           ],
+          //         ),
+          //       );
+          //       if (!context.mounted) return;
+          //       if (shouldExit != true) return;
+          //     }
+          //     Navigator.of(context).pop();
+          //   },
+          // ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -313,8 +324,10 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                       ),
                       content: Text(
                         asyncSnapshot.error.toString(),
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     );
                   },
@@ -337,16 +350,18 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                     ),
                     child: TextField(
                       readOnly: referenceImage != null,
-                      enabled:
-                          imageState.status != ImageSearchStatus.loading,
+                      enabled: imageState.status != ImageSearchStatus.loading,
                       controller: _searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: referenceImage == null ? 'Describe to find image...' : 'Using reference image only',
+                        hintText: referenceImage == null
+                            ? 'Describe to find image...'
+                            : 'Using reference image only',
                         hintStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: IconButton(
                           onPressed: () async {
-                            if (_searchController.text.trim().isNotEmpty || referenceImage != null) {
+                            if (_searchController.text.trim().isNotEmpty ||
+                                referenceImage != null) {
                               FocusScope.of(context).unfocus();
                               await context.read<ImageSearchCubit>().search(
                                 albumImages,
@@ -359,8 +374,10 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                           color: Colors.grey,
                         ),
                         suffixIcon:
-                            imageState.status == ImageSearchStatus.success ||
-                                imageState.status == ImageSearchStatus.loading
+                            ((imageState.status == ImageSearchStatus.success ||
+                                imageState.status == ImageSearchStatus.loading) && (context.watch<AlbumSearchedCubit>().state.albumName ==
+                    widget.album.name &&
+                context.watch<AlbumSearchedCubit>().state.searchStarted))
                             ? IconButton(
                                 icon: const Icon(
                                   Icons.clear,
@@ -370,8 +387,9 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                                   _searchController.clear();
                                   FocusScope.of(context).unfocus();
                                   context
-                                      .read<ImageSearchCubit>()   
+                                      .read<ImageSearchCubit>()
                                       .resetSearch();
+                                  context.read<AlbumSearchedCubit>().resetAlbumSearch();
                                 },
                               )
                             : referenceImage != null
@@ -436,6 +454,9 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                         if (value.trim().isNotEmpty || referenceImage != null) {
                           log('tap pressed');
                           FocusScope.of(context).unfocus();
+                          context.read<AlbumSearchedCubit>().setSearchStarted(
+                            widget.album.name!,
+                          );
                           await context.read<ImageSearchCubit>().search(
                             albumImages,
                             value,
@@ -447,7 +468,9 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                   ),
                 ),
 
-                if (imageState.status == ImageSearchStatus.loading) ...[
+                if (imageState.status == ImageSearchStatus.loading && (context.watch<AlbumSearchedCubit>().state.albumName ==
+                    widget.album.name &&
+                context.watch<AlbumSearchedCubit>().state.searchStarted)) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
@@ -517,7 +540,9 @@ class _AlbumImagesScreenState extends State<AlbumImagesScreen> {
                     ),
                   ),
 
-                if (imageState.status == ImageSearchStatus.success)
+                if (imageState.status == ImageSearchStatus.success && (context.watch<AlbumSearchedCubit>().state.albumName ==
+                    widget.album.name &&
+                context.watch<AlbumSearchedCubit>().state.searchStarted))
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,
